@@ -1,65 +1,137 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, onValue, off } from "firebase/database";
+
+// ✅ Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCU7AvVlcdXhCX_oNwLnb52kzZffaOFJpA",
+  authDomain: "idris-final-year-project.firebaseapp.com",
+  databaseURL:
+    "https://idris-final-year-project-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "idris-final-year-project",
+  storageBucket: "idris-final-year-project.firebasestorage.app",
+  messagingSenderId: "944665259379",
+  appId: "1:944665259379:web:b00edbe07408d966ab6906",
+};
+
+// ✅ Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
 export default function Home() {
+  const [distance, setDistance] = useState<number | null>(null);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [voiceReady, setVoiceReady] = useState(false);
+  const [lastSpoken, setLastSpoken] = useState(0);
+
+  const cooldown = 5000; // 5-second cooldown between speech
+
+  // ✅ Initialize system voices
+  const initVoices = () => {
+    const load = () => {
+      const v = window.speechSynthesis.getVoices();
+      if (v.length > 0) {
+        setVoices(v);
+        setVoiceReady(true);
+      }
+    };
+    load();
+    window.speechSynthesis.onvoiceschanged = load;
+  };
+
+  // ✅ Speak helper function
+  const speak = (text: string) => {
+    const now = Date.now();
+    if (now - lastSpoken < cooldown) return;
+    setLastSpoken(now);
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.pitch = 0.6; // Deep voice
+    utterance.rate = 0.85; // Medium speed
+    utterance.volume = 1; // Full volume
+
+    // Choose male or default voice
+    const maleVoice =
+      voices.find(
+        (v) =>
+          v.name.toLowerCase().includes("male") ||
+          v.name.toLowerCase().includes("daniel") ||
+          v.name.toLowerCase().includes("alex") ||
+          v.name.toLowerCase().includes("google uk english male")
+      ) || voices[0];
+
+    utterance.voice = maleVoice;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // ✅ Handle speech feedback based on distance value
+  const handleVoice = (value: number) => {
+    if (value >= 0 && value <= 35) speak("Obstacle in your path");
+    else if (value >= 36 && value <= 50) speak("Approaching obstacle");
+    // Removed "You can move freely"
+  };
+
+  // ✅ Listen to Firebase real-time distance updates
+  useEffect(() => {
+    if (!voiceReady) return;
+
+    const distanceRef = ref(db, "distance");
+
+    const listener = onValue(distanceRef, (snapshot) => {
+      const value = snapshot.val();
+      setDistance(value);
+      if (value !== null) handleVoice(value);
+    });
+
+    // Clean up on component unmount
+    return () => off(distanceRef, "value", listener);
+  }, [voiceReady, voices]);
+
+  // ✅ UI
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-amber-900 text-white text-center px-4">
+      <h1 className="text-4xl font-bold text-amber-500 mb-6">
+        👓 Blind Assist System
+      </h1>
+
+      <div className="bg-gray-700 p-8 rounded-2xl shadow-2xl border-2 border-amber-600 w-full max-w-md">
+        {!voiceReady ? (
+          <button
+            onClick={initVoices}
+            className="px-6 py-3 mb-4 bg-amber-500 hover:bg-amber-400 rounded-lg text-lg font-semibold"
+          >
+            🔊 Start Voice Guidance
+          </button>
+        ) : (
+          <p className="text-green-400 mb-4 font-semibold">
+            ✅ Voice system active
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        )}
+
+        <p className="text-2xl font-semibold mb-4">
+          Distance:
+          <span className="text-amber-400 ml-2">
+            {distance !== null ? `${distance.toFixed(2)} cm` : "Loading..."}
+          </span>
+        </p>
+
+        <p className="text-lg text-gray-300 italic mb-6">
+          {distance !== null
+            ? distance >= 0 && distance <= 35
+              ? "⚠️ Obstacle in your path"
+              : distance >= 36 && distance <= 50
+              ? "🚧 Approaching obstacle"
+              : ""
+            : "Connecting to sensor..."}
+        </p>
+      </div>
+
+      <p className="mt-8 text-sm text-gray-400">
+        Click “Start Voice Guidance” first to enable sound 🔊
+      </p>
     </div>
   );
 }
