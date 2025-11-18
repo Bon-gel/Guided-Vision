@@ -93,7 +93,7 @@ const handleVoice = (value: number) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-amber-900 text-white text-center px-4">
       <h1 className="text-4xl font-bold text-amber-500 mb-6">
-        👓 Blind Assist System
+        👓 Guided Vision 
       </h1>
 
       <div className="bg-gray-700 p-8 rounded-2xl shadow-2xl border-2 border-amber-600 w-full max-w-md">
