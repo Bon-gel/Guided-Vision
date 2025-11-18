@@ -66,13 +66,12 @@ export default function Home() {
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
   };
-
-  // ✅ Handle speech feedback based on distance value
-  const handleVoice = (value: number) => {
-    if (value >= 0 && value <= 35) speak("Obstacle in your path");
-    else if (value >= 36 && value <= 50) speak("Approaching obstacle");
-    // Removed "You can move freely"
-  };
+// Handle speech feedback based on distance value
+const handleVoice = (value: number) => {
+  if (value >= 0 && value <= 60) speak("Obstacle in your path");
+  else if (value >= 61 && value <= 100) speak("Approaching obstacle");
+  else if (value >= 101 && value <= 105) speak("You can move freely");
+};
 
   // ✅ Listen to Firebase real-time distance updates
   useEffect(() => {
@@ -120,12 +119,15 @@ export default function Home() {
 
         <p className="text-lg text-gray-300 italic mb-6">
           {distance !== null
-            ? distance >= 0 && distance <= 35
+            ? distance >= 0 && distance <= 60
               ? "⚠️ Obstacle in your path"
-              : distance >= 36 && distance <= 50
+              : distance >= 61 && distance <= 100
               ? "🚧 Approaching obstacle"
+              : distance >= 101 && distance <= 105
+              ? "✅ You can move freely"
               : ""
-            : "Connecting to sensor..."}
+           : "Connecting to sensor..."}
+
         </p>
       </div>
 
